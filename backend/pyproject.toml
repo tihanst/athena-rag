@@ -5,7 +5,15 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "docling>=2.117.0",
     "fastapi>=0.141.1",
+    "langchain-community>=0.4.2",
+    "langchain-text-splitters>=1.1.2",
+    "pdf-inspector>=0.2.6",
     "python-multipart>=0.0.32",
     "uvicorn[standard]>=0.52.0",
 ]
+
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"

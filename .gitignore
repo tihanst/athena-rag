@@ -18,3 +18,7 @@ backend/uploads/*
 
 # Uploaded Files
 uploads/
+
+
+# Rust
+/backend/target/
