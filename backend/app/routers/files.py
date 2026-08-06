@@ -1,6 +1,7 @@
 import uuid
 from pathlib import Path
 from datetime import datetime
+import asyncio
 
 from langchain_community.document_loaders import TextLoader
 from langchain_core.documents import Document
@@ -60,9 +61,11 @@ async def upload_file(file: UploadFile) -> FileRecord:
 
     dest.write_bytes(contents)
 
-    # Upload file (converting to markdown or keeping as txt as well)
+    # Upload file, offload in case OCR runs so not to block server
     try:
-        file_uploader(id_based_filename, UPLOAD_DIR, MARKDOWN_DIR)
+        document_text = await asyncio.to_thread(
+            file_uploader, id_based_filename, UPLOAD_DIR, MARKDOWN_DIR
+        )
     except UnicodeDecodeError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -78,7 +81,15 @@ async def upload_file(file: UploadFile) -> FileRecord:
 
     files[file_id] = record
 
-    print(f"\n\n****{files}***\n\n")
+    print(f"---{record.model_dump()}---")
+    # print(f"\n\n****{files}***\n\n")
+
+    document = Document(document_text, matadata=record.model_dump())
+
+    chunks = chunk_text([document], document_id=id_based_filename)
+    [print(f"\n\n****{chunks[x].page_content}***\n\n") for x in range(99, 102)]
+
+    [print(f"\n\n****{chunks[x].metadata}***\n\n") for x in range(99, 102)]
 
     return record
 

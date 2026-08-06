@@ -5,7 +5,7 @@ from pathlib import Path
 
 def file_uploader(
     id_based_file_name: str, uploads_path: Path, markdown_upload_path: Path
-):
+) -> str:
     # Handle a pdf (scanned or otherwise), txt, md, or docx separately NEEDS TO BE DONE....breakout a with open(...) as a separate function
 
     # print(file_path)
@@ -25,28 +25,27 @@ def file_uploader(
             result = converter.convert(full_file_path)
             mkdn_result = result.document.export_to_markdown()
             # print(f"****USED DOCLING****\n\n\n{mkdn_result}")
-            with open(
-                f"{markdown_upload_path}/{base_name}.md",
-                "w",
-                encoding="utf-8",
-            ) as f:
-                f.write(mkdn_result)
         else:
-            with open(
-                f"{markdown_upload_path}/{base_name}.md",
-                "w",
-                encoding="utf-8",
-            ) as f:
-                if result.markdown is not None:
-                    f.write(result.markdown)
+            mkdn_result = result.markdown or ""
+
+        with open(
+            f"{markdown_upload_path}/{base_name}.md",
+            "w",
+            encoding="utf-8",
+        ) as f:
+            f.write(mkdn_result)
+
+        return mkdn_result
 
     elif suffix == ".txt":
         text = full_file_path.read_text(encoding="utf-8")
         (markdown_upload_path / f"{base_name}.txt").write_text(text, encoding="utf-8")
+        return text
 
     elif suffix == ".md":
         text = full_file_path.read_text(encoding="utf-8")
         (markdown_upload_path / f"{base_name}.md").write_text(text, encoding="utf-8")
+        return text
 
     elif suffix == ".docx":
         converter = DocumentConverter()
@@ -55,7 +54,12 @@ def file_uploader(
         (markdown_upload_path / f"{base_name}.md").write_text(
             mkdn_result, encoding="utf-8"
         )
+        return mkdn_result
+
+    else:
+        raise ValueError(f"Unsupported file suffix: {suffix!r}")
 
 
 if __name__ == "__main__":
-    file_uploader("f")
+    pass
+    # file_uploader()
