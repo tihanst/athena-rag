@@ -7,13 +7,17 @@ requires-python = ">=3.12"
 dependencies = [
     "docling>=2.117.0",
     "fastapi>=0.141.1",
+    "flagembedding>=1.4.0",
     "langchain-community>=0.4.2",
     "langchain-text-splitters>=1.1.2",
+    "litellm>=1.96.0",
     "pdf-inspector>=0.2.6",
+    "pydantic-settings>=2.14.2",
     "python-multipart>=0.0.32",
+    "sentence-transformers>=5.7.0",
+    "sqlite-vec>=0.1.9",
     "uvicorn[standard]>=0.52.0",
 ]
 
-[build-system]
-requires = ["maturin>=1.0,<2.0"]
-build-backend = "maturin"
+[tool.uv]
+package = false

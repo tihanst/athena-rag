@@ -8,6 +8,7 @@ backend/.venv/
 backend/__pycache__/
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/app/temp/
 **/__pycache__/
 *.pyc
 
@@ -19,6 +20,16 @@ backend/uploads/*
 # Uploaded Files
 uploads/
 
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
 
 # Rust
 /backend/target/
+
+# Secrets
+.env
+
+# Testing

@@ -1,0 +1,8 @@
+
+
+-----
+
+For the 3 query BM25 use ORDER BY RANK and LIMIT 100 from each list, when doing rrf set k = 30 to balance depth/breadth
+For the merge with semantic set (of size 100) at 60 default
+
+Make sure to use the porter tokenizer when declaring fts5

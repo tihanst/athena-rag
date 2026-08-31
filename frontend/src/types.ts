@@ -8,11 +8,16 @@ export interface ChatMessage {
   pending?: boolean;
 }
 
-export type UploadStatus = "uploading" | "ready" | "error";
+export type UploadStatus = "uploading" | "ready" | "error" | "missing";
 
 export interface UploadedFile {
   id: string;
   name: string;
-  size: number;
+  size?: number;
   status: UploadStatus;
+}
+
+export interface DocumentStatus {
+  exists: string[];
+  missing: string[];
 }

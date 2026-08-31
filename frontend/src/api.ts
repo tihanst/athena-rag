@@ -1,4 +1,4 @@
-import type { ChatMessage, UploadedFile } from "./types";
+import type { ChatMessage, DocumentStatus, UploadedFile } from "./types";
 
 const BASE = "/api";
 
@@ -12,15 +12,11 @@ async function parseOrThrow(res: Response) {
 
 export async function sendChatMessage(
   message: string,
-  history: ChatMessage[],
 ): Promise<{ role: "assistant"; content: string }> {
   const res = await fetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message,
-      history: history.map((m) => ({ role: m.role, content: m.content })),
-    }),
+    body: JSON.stringify({ content: message }),
   });
   return parseOrThrow(res);
 }
@@ -37,6 +33,11 @@ export async function uploadFile(file: File): Promise<UploadedFile> {
 
 export async function fetchFiles(): Promise<UploadedFile[]> {
   const res = await fetch(`${BASE}/files`);
+  return parseOrThrow(res);
+}
+
+export async function fetchFilesStatus(): Promise<DocumentStatus> {
+  const res = await fetch(`${BASE}/files/status`);
   return parseOrThrow(res);
 }
 

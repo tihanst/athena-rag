@@ -28,6 +28,14 @@ function StatusBadge({ status }: { status: UploadedFile["status"] }) {
   if (status === "error") {
     return <span className="text-xs text-red-400">Failed</span>;
   }
+  if (status === "missing") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-orange-400">
+        <span className="h-1.5 w-1.5 rounded-full bg-orange-400" />
+        Missing &ndash; needs re-upload
+      </span>
+    );
+  }
   return <span className="text-xs text-emerald-400">Ready</span>;
 }
 
@@ -78,12 +86,29 @@ export default function Sidebar({
 
   return (
     <div className="flex h-full w-1/4 min-w-[240px] max-w-[360px] flex-col border-r border-slate-800 bg-slate-900 text-slate-100">
-      <div className="flex items-center justify-between px-4 py-4">
-        <div>
-          <h1 className="text-sm font-semibold tracking-wide text-white">
-            RAG Portal
-          </h1>
-          <p className="text-xs text-slate-400">Knowledge corpus</p>
+      <div className="relative flex items-center justify-between bg-[linear-gradient(to_bottom,rgba(99,102,241,0.35)_0%,transparent_30%,transparent_70%,rgba(99,102,241,0.35)_100%)] px-4 py-4">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-50"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'320'%20height%3D'320'%3E%3Cfilter%20id%3D'n'%3E%3CfeTurbulence%20type%3D'fractalNoise'%20baseFrequency%3D'2.5'%20numOctaves%3D'3'%20stitchTiles%3D'stitch'%20result%3D'noise'%2F%3E%3CfeColorMatrix%20in%3D'noise'%20type%3D'luminanceToAlpha'%20result%3D'alpha'%2F%3E%3CfeComponentTransfer%20in%3D'alpha'%20result%3D'alpha2'%3E%3CfeFuncA%20type%3D'linear'%20slope%3D'5'%20intercept%3D'-3.2'%2F%3E%3C%2FfeComponentTransfer%3E%3CfeFlood%20flood-color%3D'white'%20result%3D'white'%2F%3E%3CfeComposite%20in%3D'white'%20in2%3D'alpha2'%20operator%3D'in'%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D'100%25'%20height%3D'100%25'%20filter%3D'url%28%23n%29'%2F%3E%3C%2Fsvg%3E\")",
+            backgroundSize: "320px 320px",
+          }}
+        />
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-sm font-semibold tracking-wide text-white">
+              RAG Portal
+            </h1>
+            <p className="text-xs text-slate-400">Knowledge corpus</p>
+          </div>
+          <div className="flex h-36 w-36 shrink-0 items-center justify-center">
+            <img
+              src="/Athena4_white.png"
+              alt="RAG Portal logo"
+              className="h-28 w-28 object-contain drop-shadow-[0_0_10px_rgba(129,140,248,0.45)]"
+            />
+          </div>
         </div>
         <button
           type="button"
@@ -95,7 +120,8 @@ export default function Sidebar({
         </button>
       </div>
 
-      <div className="px-4">
+      <div className="flex flex-1 flex-col">
+      <div className="mt-4 px-4">
         <div
           onDragOver={(e) => {
             e.preventDefault();
@@ -104,11 +130,10 @@ export default function Sidebar({
           onDragLeave={() => setDragActive(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${
-            dragActive
-              ? "border-indigo-400 bg-indigo-500/10"
-              : "border-slate-700 bg-slate-800/40 hover:border-slate-600 hover:bg-slate-800/60"
-          }`}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors ${dragActive
+            ? "border-indigo-400 bg-indigo-500/10"
+            : "border-slate-700 bg-slate-800/40 hover:border-slate-600 hover:bg-slate-800/60"
+            }`}
         >
           <UploadIcon className="h-6 w-6 text-slate-400" />
           <p className="text-sm text-slate-300">
@@ -152,24 +177,29 @@ export default function Sidebar({
                     {f.name}
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">
-                      {formatSize(f.size)}
-                    </span>
+                    {f.size !== undefined && (
+                      <span className="text-xs text-slate-500">
+                        {formatSize(f.size)}
+                      </span>
+                    )}
                     <StatusBadge status={f.status} />
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onRemoveFile(f.id)}
-                  title="Remove file"
-                  className="shrink-0 rounded p-1 text-slate-500 opacity-0 hover:bg-slate-700 hover:text-slate-200 group-hover:opacity-100"
-                >
-                  <CloseIcon className="h-3.5 w-3.5" />
-                </button>
+                {!f.id.startsWith("db-") && (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveFile(f.id)}
+                    title="Remove file"
+                    className="shrink-0 rounded p-1 text-slate-500 opacity-0 hover:bg-slate-700 hover:text-slate-200 group-hover:opacity-100"
+                  >
+                    <CloseIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
+      </div>
       </div>
     </div>
   );

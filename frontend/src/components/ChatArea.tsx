@@ -24,7 +24,7 @@ export default function ChatArea({
           </h2>
           <p className="text-xs text-slate-500">
             {fileCount > 0
-              ? `${fileCount} file${fileCount === 1 ? "" : "s"} in context`
+              ? `${fileCount} file${fileCount === 1 ? "" : "s"} available for context`
               : "No files uploaded yet"}
           </p>
         </div>

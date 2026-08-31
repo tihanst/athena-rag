@@ -1,0 +1,68 @@
+from langchain_core.documents import Document
+
+
+def expand_merge_and_reconstruct(
+    retrieved_chunks: list[Document],
+    all_chunks: list[Document],
+    original_text: str,
+) -> list[Document]:
+    by_index = {
+        chunk.metadata["document_chunk_index"]: chunk
+        for chunk in all_chunks
+    }
+
+    selected: set[int] = set()
+
+    # Add each retrieved chunk and its immediate neighbours.
+    for chunk in retrieved_chunks:
+        index = chunk.metadata["document_chunk_index"]
+
+        for candidate in (index - 1, index, index + 1):
+            if candidate in by_index:
+                selected.add(candidate)
+
+    # Fill gaps containing exactly one missing chunk.
+    ordered = sorted(selected)
+
+    for left, right in zip(ordered, ordered[1:]):
+        if right - left == 2:
+            missing = left + 1
+
+            if missing in by_index:
+                selected.add(missing)
+
+    # Group all contiguous chunks.
+    ordered = sorted(selected)
+    groups: list[list[int]] = []
+
+    for index in ordered:
+        if not groups or index != groups[-1][-1] + 1:
+            groups.append([index])
+        else:
+            groups[-1].append(index)
+
+    # Reconstruct exact text, including original separators.
+    merged_documents: list[Document] = []
+
+    for group in groups:
+        first_chunk = by_index[group[0]]
+        last_chunk = by_index[group[-1]]
+
+        start = first_chunk.metadata["start_index"]
+        end = last_chunk.metadata["end_index"]
+
+        merged_documents.append(
+            Document(
+                page_content=original_text[start:end],
+                metadata={
+                    "document_id": first_chunk.metadata["document_id"],
+                    "start_index": start,
+                    "end_index": end,
+                    "first_chunk_index": group[0],
+                    "last_chunk_index": group[-1],
+                    "included_chunk_indices": group,
+                },
+            )
+        )
+
+    return merged_documents

@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
 import type { ChatMessage, UploadedFile } from "./types";
-import { deleteFile, fetchFiles, sendChatMessage, uploadFile } from "./api";
+import {
+  deleteFile,
+  fetchFiles,
+  fetchFilesStatus,
+  sendChatMessage,
+  uploadFile,
+} from "./api";
 
 function makeId() {
   return crypto.randomUUID();
@@ -19,6 +25,36 @@ function App() {
       .then(setFiles)
       .catch(() => {
         /* backend not reachable yet; ignore for the mock front end */
+      });
+
+    // The in-memory file list above resets on every backend restart, but the
+    // database corpus persists. Cross-check it against the markdown uploads
+    // directory so files that survived the database but not the disk (or
+    // vice versa) are surfaced to the user as needing re-upload.
+    fetchFilesStatus()
+      .then((status) => {
+        setFiles((prev) => {
+          const known = new Set(prev.map((f) => f.name));
+          const additions: UploadedFile[] = [];
+
+          for (const name of status.exists) {
+            if (!known.has(name)) {
+              additions.push({ id: `db-exists-${name}`, name, status: "ready" });
+              known.add(name);
+            }
+          }
+          for (const name of status.missing) {
+            if (!known.has(name)) {
+              additions.push({ id: `db-missing-${name}`, name, status: "missing" });
+              known.add(name);
+            }
+          }
+
+          return additions.length ? [...prev, ...additions] : prev;
+        });
+      })
+      .catch(() => {
+        /* status check is best-effort */
       });
   }, []);
 
@@ -71,7 +107,7 @@ function App() {
       setMessages((prev) => [...prev, userMessage, pendingMessage]);
       setSending(true);
 
-      sendChatMessage(content, [...messages, userMessage])
+      sendChatMessage(content)
         .then((reply) => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -86,10 +122,10 @@ function App() {
             prev.map((m) =>
               m.id === pendingId
                 ? {
-                    ...m,
-                    content: `Error reaching backend: ${err.message}`,
-                    pending: false,
-                  }
+                  ...m,
+                  content: `Error reaching backend: ${err.message}`,
+                  pending: false,
+                }
                 : m,
             ),
           );
