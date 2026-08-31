@@ -4,14 +4,9 @@ from app.schemas import SearchRole, SearchTerm, SearchTerms
 
 
 # Run llm schema extractions
-
 # Form T E I C blocks
-
 # Construct sqlite queries Search db
-
 # RRF results
-
-
 # completion.choices[0].message.content is { terms: [list of dictionaries that are the schema object SearchRole, SearchTerm, SearchTerms]}
 
 

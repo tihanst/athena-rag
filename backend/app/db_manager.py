@@ -12,7 +12,7 @@ from .lex_search import process_lexical_query
 from .db_types import ChunkRow, ScoredChunkRow
 
 # Testing
-from app.sem_search import embedder
+from app.sem_search import get_embedder
 from app.config import MARKDOWN_DIR
 # from .sem_search import process_semantic_query
 
@@ -225,7 +225,7 @@ def execute_lexical_retrieval(
 def execute_semantic_retrieval(
     query: str, match_limit: int = 100
 ) -> list[ScoredChunkRow]:
-    q = embedder.embed_query(query)
+    q = get_embedder().embed_query(query)
 
     with get_connection() as conn:
         rows = conn.execute(

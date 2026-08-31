@@ -1,5 +1,4 @@
 import asyncio
-from pprint import pprint
 import json
 from collections import defaultdict
 
@@ -18,7 +17,7 @@ from app.db_types import RerankedResult
 from app.llm import llms
 from app.prompts import SEARCH_TERMS_SYSTEM_PROMPT, RAG_USER_PROMPT
 from app.db_manager import execute_final_search_retrieval
-from app.rerank import cross_encoder
+from app.rerank import get_cross_encoder
 from app.db_types import ChunkRow, FusedResult
 from app.text_extractor import extract_original_text
 from app.prompt_constructor import construct_rag_chat_user_prompt
@@ -71,7 +70,7 @@ def search_and_retrieve_chunks(
     )
 
     # Rerank
-    reranked_list: list[RerankedResult] = cross_encoder.rerank_list(
+    reranked_list: list[RerankedResult] = get_cross_encoder().rerank_list(
         query=query, data_list=retrieved
     )
 

@@ -4,12 +4,13 @@ import numpy as np
 # from sklearn.metrics.pairwise import cosine_similarity
 
 from FlagEmbedding import BGEM3FlagModel, FlagModel
+from app.config import embedder_settings
 
 
 class BGEEmbedder:
     """Wrapper for BGE-small-en-v1.5 or BGE-M3 dense embeddings."""
 
-    def __init__(self, small: bool = True):
+    def __init__(self, small: bool = embedder_settings.embedder_use_small):
         self.small = small
 
         if self.small:
@@ -84,7 +85,17 @@ class BGEEmbedder:
         return vec.tolist()
 
 
-embedder = BGEEmbedder(small=False)
+# Replace with lazy load
+# embedder = BGEEmbedder()
+
+_embedder: BGEEmbedder | None = None
+
+
+def get_embedder():
+    global _embedder
+    if _embedder is None:
+        _embedder = BGEEmbedder()
+    return _embedder
 
 
 if __name__ == "__main__":

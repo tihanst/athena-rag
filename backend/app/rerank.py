@@ -44,7 +44,18 @@ class ReRanker:
         ][: self.top_k]
 
 
-cross_encoder = ReRanker()
+# Replace with lazy eval
+# cross_encoder = ReRanker()
+
+_cross_encoder: ReRanker | None = None
+
+
+def get_cross_encoder():
+    global _cross_encoder
+    if _cross_encoder is None:
+        _cross_encoder = ReRanker()
+    return _cross_encoder
+
 
 # def rerank(
 #     self,

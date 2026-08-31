@@ -21,15 +21,22 @@ class LLMSettings(BaseSettings):
     )
 
 
-class XEncoder(BaseSettings):
+class XEncoderSettings(BaseSettings):
     cross_encoder_model: str
     cross_encoder_top_k: int
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
+class EmbedderSettings(BaseSettings):
+    embedder_use_small: bool
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+
 llm_settings = LLMSettings()
-xencoder_settings = XEncoder()
+xencoder_settings = XEncoderSettings()
+embedder_settings = EmbedderSettings()
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)

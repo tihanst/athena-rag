@@ -16,7 +16,7 @@ from app.config import UPLOAD_DIR, MARKDOWN_DIR
 from ..uploader import file_uploader
 from ..db_manager import process_chunks, query_database_source_documents
 from ..chunker import chunk_text
-from ..sem_search import embedder
+from ..sem_search import get_embedder
 
 router = APIRouter(prefix="/api", tags=["files"])
 
@@ -92,7 +92,7 @@ async def upload_file(file: UploadFile) -> FileRecord:
         document_id=record.document_id if record.document_id is not None else "",
     )
     # print(chunks)
-    embeddings = embedder.embed_documents([x.page_content for x in chunks])
+    embeddings = get_embedder().embed_documents([x.page_content for x in chunks])
     embedding_f32 = np.asarray(embeddings, dtype=np.float32)
 
     process_chunks(chunks=chunks, embeddings=embedding_f32)

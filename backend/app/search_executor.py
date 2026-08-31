@@ -5,7 +5,6 @@ from typing import Any
 from .lex_search import process_lexical_query
 from .db_types import ScoredChunkRow, FusedResult
 
-from .sem_search import embedder
 from app.db_manager import execute_lexical_retrieval, execute_semantic_retrieval
 from app.schemas import SearchTerm, SearchRole, SearchTerms
 
