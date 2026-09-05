@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routers import chat, files
 from app.rerank import get_cross_encoder
 from app.sem_search import get_embedder
+from app.memory import flush_log_history
 
 
 @asynccontextmanager
@@ -14,6 +15,7 @@ async def lifespan(app: FastAPI):
     asyncio.get_running_loop().run_in_executor(None, get_embedder)
     asyncio.get_running_loop().run_in_executor(None, get_cross_encoder)
     yield
+    flush_log_history("successful_finish")
 
 
 app = FastAPI(title="RAG Portal API", lifespan=lifespan)

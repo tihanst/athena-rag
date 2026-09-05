@@ -58,6 +58,14 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+    const flushChatLog = () => {
+      navigator.sendBeacon("/api/chat/reset");
+    };
+    window.addEventListener("pagehide", flushChatLog);
+    return () => window.removeEventListener("pagehide", flushChatLog);
+  }, []);
+
   const handleFilesSelected = useCallback((incoming: FileList | File[]) => {
     const list = Array.from(incoming);
     for (const file of list) {

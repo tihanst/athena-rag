@@ -11,6 +11,7 @@ backend/uploads/*
 backend/app/temp/
 **/__pycache__/
 *.pyc
+backend/logs
 
 # Editor / OS
 .DS_Store

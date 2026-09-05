@@ -12,7 +12,7 @@ from app.schemas import (
     SearchTerms,
     ContextLoadChunk,
 )
-from app.memory import chat_history, ChatHistory
+from app.memory import log_history, chat_history, ChatHistory
 from app.db_types import RerankedResult
 from app.llm import llms
 from app.prompts import SEARCH_TERMS_SYSTEM_PROMPT, RAG_USER_PROMPT
@@ -43,6 +43,7 @@ async def run_chat(request: ChatRequest):
     context_chunks_dict = search_and_retrieve_chunks(
         query=query, lexical_search_terms=lex_search_terms
     )
+    log_history.add_search_item(lex_search_terms)
 
     context_string = construct_rag_chat_user_prompt(context_dict=context_chunks_dict)
 
@@ -56,6 +57,8 @@ async def run_chat(request: ChatRequest):
     print("Full model answer is:")
     print(answer)
     yield answer
+
+    print(f"\n\n\n\n------------\n\n\n\n{log_history.unload_and_pack()}\n\n")
 
     yield "Yo there"
 
@@ -250,7 +253,16 @@ async def generate_chat_completion(full_context_query: str) -> str:
 
     chat_model = llms["chat_llm"]
 
-    response = await chat_model.acompletion_call(messages=chat_history)
+    try:
+        response = await chat_model.acompletion_call(
+            messages=chat_history, timeout=30, num_retries=0
+        )
+    except RuntimeError:
+        timeout_message = "Chat LLM timed-out waiting for response. Please try again."
+        chat_history.add_message(
+            ChatResponse(role="assistant", content=timeout_message)
+        )
+        return timeout_message
 
     message = response.choices[0].message.content
 
