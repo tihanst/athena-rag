@@ -34,3 +34,6 @@ uploads/
 .env
 
 # Testing
+
+# Scratch
+/random
