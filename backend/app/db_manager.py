@@ -279,7 +279,6 @@ def query_database_source_documents() -> dict[str, list[str]]:
             present_or_not["missing"].append(short_doc)
 
     return present_or_not
-    # print(f"Exists or not dict:\n\n{present_or_not}")
 
 
 def delete_it():

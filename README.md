@@ -32,6 +32,8 @@ SUMMARIZER_LLM__MODEL_ID=...
 
 CROSS_ENCODER_MODEL=...
 CROSS_ENCODER_TOP_K=...
+
+EMBEDDER_USE_SMALL=...
 ```
 
 Plus whatever API key(s) your chosen LLM provider(s) need (see [litellm's provider docs](https://docs.litellm.ai/docs/providers)).
@@ -69,6 +71,7 @@ cd frontend && npm run dev
 ## API
 
 - `POST /api/chat` — accepts `{ message, history }`, runs the RAG pipeline, returns the assistant's response.
+- `POST /api/chat/reset` — cancels any in-flight chat request, flushes the session to `backend/logs/chat_sessions.jsonl`, and clears conversation/lexical history.
 - `POST /api/upload` — accepts a multipart file, ingests it (chunk + embed + index), returns file metadata.
 - `GET /api/files` — lists uploaded file metadata.
 - `GET /api/files/status` — flags files referenced in the database but missing on disk.
