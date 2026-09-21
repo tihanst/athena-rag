@@ -1,4 +1,4 @@
-"""Basic singleton memory module for a chat session. Resets on /chat/reset route. Does not reset on refresh of web app page"""
+"""Basic singleton memory module for a chat session. Resets on /chat/reset route, which the frontend calls on page hide (reload/close)."""
 
 from pydantic import BaseModel
 from pathlib import Path
@@ -28,19 +28,13 @@ class ChatHistory(BaseModel):
         self.history.append(message)
 
     def clear_conversation_history(self) -> None:
-        self.history = []
+        # Keep system message(s) so the LLM still has its instructions after a reset
+        self.history = [m for m in self.history if m.role == "system"]
 
 
 # Strictly for use in the chat llm as a singleton, not lexical search llm or any others
 chat_history = ChatHistory()
 chat_history.add_message(ChatSystem(role="system", content=RAG_CHAT_SYSTEM_PROMPT))
-
-
-# class SemanticHistory(BaseModel):
-#     semantic_history: dict[int, SearchTerms] = {}
-
-#     def add_search_item(self, item: SearchTerms):
-#         self.semantic_history[len(self.semantic_history)] = item
 
 
 class LogHistory(BaseModel):
