@@ -25,6 +25,8 @@ from app.prompt_constructor import construct_rag_chat_user_prompt
 
 from app.search_executor import run_search
 
+MAX_SEARCH_PLAN_ATTEMPTS = 3
+
 """
 This will eventually decidee RAG or not, but just run RAG every time to start
 Takes a ChatRequest, parses for search in lexical and semantic using llm 
@@ -81,10 +83,6 @@ def search_and_retrieve_chunks(
     # Must take the start_index of the first of a contiguous, through to the end_index of the last of a contiguous.
     compiled_retrieved = compile_retrieved_indices(reranked_list)
 
-    # for x in reranked_list:
-    #     yield repr(x)
-    #     yield "\n\n"
-
     # Group documents by document_id based on max score of retrieved docs
     grouped_context_docs: defaultdict[str, list[RerankedResult]] = defaultdict(list)
 
@@ -111,15 +109,9 @@ def search_and_retrieve_chunks(
     context_references_for_db_query: dict[str, list[int]] = defaultdict(list)
 
     for key, value in grouped_context_docs.items():
-        # print(f"Old for {key} = {value}\n")
-
         context_references_for_db_query[key] = compiled_retrieved[key]
 
-    # print(f"Context ref for dbquery dict is:\n\n{context_references_for_db_query}\n\n")
-
     final_context_list = retrieve_full_context(context_references_for_db_query)
-    # print("\n\n\n\n\n\n")
-    # print(f"Final context list is:\n\n{final_context_list}")
 
     context_dict: dict[str, list[ContextLoadChunk]] = defaultdict(list)
 
@@ -129,7 +121,6 @@ def search_and_retrieve_chunks(
             context_load_chunks.append(extract_original_text((doc, span)))
         context_dict[doc] = context_load_chunks
 
-    # print(f"\n\n\nContext load chunks are:\n\n{context_dict}\n\n")
     print("\n\n\n")
     for doc, entries in context_dict.items():
         print(f"Document is: {doc}\n\n")
@@ -152,27 +143,37 @@ async def generate_lexical_search_terms(request: ChatRequest) -> SearchTerms:
     # Don't pollute chat memory for the lexical search (can log those later)
     history = ChatHistory(history=[lex_search_system_msg, chat_request])
 
-    lex_search_plan = await search_planner.acompletion_call(
-        messages=history,
-        response_format=SearchTerms,
-        temperature=0.0,
-        top_p=1.0,
-        timeout=5,
-        num_retries=2,
-        drop_params=True,
-        # This line overrides the UnsupportedParamsError validation check
-        allowed_openai_params=["response_format"],
-    )
+    last_error: ValueError | None = None
+    for attempt in range(MAX_SEARCH_PLAN_ATTEMPTS):
+        lex_search_plan = await search_planner.acompletion_call(
+            messages=history,
+            response_format=SearchTerms,
+            # Deterministic first try; nudge sampling on retries so a degenerate
+            # output isn't reproduced verbatim.
+            temperature=0.0 if attempt == 0 else 0.3,
+            top_p=1.0,
+            timeout=5,
+            num_retries=2,
+            drop_params=True,
+            # This line overrides the UnsupportedParamsError validation check
+            allowed_openai_params=["response_format"],
+        )
 
-    raw = lex_search_plan.choices[0].message.content
+        raw = lex_search_plan.choices[0].message.content
 
-    try:
-        valid_data = SearchTerms.model_validate_json(raw)
-        print("\n\nValidated Search Terms are:\n\n")
-        print(valid_data)
-        return valid_data
-    except (ValidationError, json.JSONDecodeError) as e:
-        raise ValueError(f"Returned payload malformed as {raw!r} for error: {e}") from e
+        try:
+            valid_data = SearchTerms.model_validate_json(raw)
+            print("\n\nValidated Search Terms are:\n\n")
+            print(valid_data)
+            return valid_data
+        except (ValidationError, json.JSONDecodeError) as e:
+            print(f"Search terms attempt {attempt + 1} malformed: {raw!r}")
+            last_error = ValueError(
+                f"Returned payload malformed as {raw!r} for error: {e}"
+            )
+            last_error.__cause__ = e
+
+    raise last_error
 
 
 def _compress_to_spans(sorted_indices: list[int]) -> list[tuple[int, int] | tuple[int]]:
@@ -257,8 +258,16 @@ async def generate_chat_completion(full_context_query: str) -> str:
         response = await chat_model.acompletion_call(
             messages=chat_history, timeout=30, num_retries=0
         )
-    except RuntimeError:
-        timeout_message = "Chat LLM timed-out waiting for response. Please try again."
+    except RuntimeError as e:
+        # acompletion_call wraps every LiteLLM failure (timeout, context length,
+        # auth, rate limit...) in RuntimeError, so surface the real cause.
+        print(
+            f"Chat LLM call failed (prompt ~{len(full_context_query):,} chars, "
+            f"{len(chat_history)} messages in history):\n{e}"
+        )
+        timeout_message = (
+            "Chat LLM request failed (see backend log for details). Please try again."
+        )
         chat_history.add_message(
             ChatResponse(role="assistant", content=timeout_message)
         )
@@ -281,18 +290,7 @@ async def main():
         history=[ChatHistoryItem(role="system", content=SEARCH_TERMS_SYSTEM_PROMPT)],
     )
     run_chat(chat_request)
-    # async for chunk in run_chat(chat_request):
-    #     print(chunk, end="")
-    # result = await generate_lexical_search_terms(chat_request)
-    # return result
 
 
 if __name__ == "__main__":
     result = asyncio.run(main())
-    # print(result)
-    # pprint(result, indent=3)
-    # sterms = SearchTerms.model_validate(result)
-    # # print(result.choices[0].message.content)
-    # lex_queries = process_lexical_query(sterms.model_dump()["terms"])
-    # executed_lex = execute_lexical_retrieval(lex_queries)
-    # # print(sterms)
