@@ -19,6 +19,7 @@ function App() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
+  const [chatViewKey, setChatViewKey] = useState(0);
 
   useEffect(() => {
     fetchFiles()
@@ -62,8 +63,25 @@ function App() {
     const flushChatLog = () => {
       navigator.sendBeacon("/api/chat/reset");
     };
+
+    // The backend is reset on pagehide, but browsers may restore this page's
+    // React state from the back/forward cache. Clear that restored state and
+    // remount the chat area so its independently managed draft is cleared too.
+    const resyncOnRestore = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        setMessages([]);
+        setSending(false);
+        setChatViewKey((key) => key + 1);
+      }
+    };
+
     window.addEventListener("pagehide", flushChatLog);
-    return () => window.removeEventListener("pagehide", flushChatLog);
+    window.addEventListener("pageshow", resyncOnRestore);
+
+    return () => {
+      window.removeEventListener("pagehide", flushChatLog);
+      window.removeEventListener("pageshow", resyncOnRestore);
+    };
   }, []);
 
   const handleFilesSelected = useCallback((incoming: FileList | File[]) => {
@@ -153,6 +171,7 @@ function App() {
         onRemoveFile={handleRemoveFile}
       />
       <ChatArea
+        key={chatViewKey}
         messages={messages}
         onSend={handleSend}
         sending={sending}
