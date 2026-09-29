@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ChatMessage } from "../types";
 
 interface MessageListProps {
@@ -22,6 +24,35 @@ function Avatar({ role }: { role: ChatMessage["role"] }) {
     >
       {isUser ? "You" : "AI"}
     </div>
+  );
+}
+
+function MessageContent({ message }: { message: ChatMessage }) {
+  if (message.role === "user") {
+    return (
+      <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
+        {message.content}
+      </p>
+    );
+  }
+
+  return (
+    <article className="prose prose-sm prose-slate mt-1 max-w-none break-words text-slate-700 prose-headings:text-slate-900 prose-p:my-2 prose-p:leading-relaxed prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        skipHtml
+        components={{
+          // Do not let model-generated Markdown trigger third-party image requests.
+          img: ({ alt = "" }) => (
+            <span className="italic text-slate-500">
+              {alt ? `[Image: ${alt}]` : "[Image omitted]"}
+            </span>
+          ),
+        }}
+      >
+        {message.content}
+      </Markdown>
+    </article>
   );
 }
 
@@ -71,9 +102,7 @@ export default function MessageList({ messages }: MessageListProps) {
                   <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
                 </div>
               ) : (
-                <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
-                  {m.content}
-                </p>
+                <MessageContent message={m} />
               )}
             </div>
           </div>
