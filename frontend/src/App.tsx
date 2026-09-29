@@ -17,46 +17,54 @@ function makeId() {
 function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(true);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [chatViewKey, setChatViewKey] = useState(0);
 
   useEffect(() => {
-    fetchFiles()
-      .then(setFiles)
-      .catch(() => {
-        /* backend not reachable yet; ignore for the mock front end */
-      });
+    let cancelled = false;
 
-    // The in-memory file list above resets on every backend restart, but the
-    // database corpus persists. Cross-check it against the markdown uploads
-    // directory so files that survived the database but not the disk (or
-    // vice versa) are surfaced to the user as needing re-upload.
-    fetchFilesStatus()
-      .then((status) => {
-        setFiles((prev) => {
-          const known = new Set(prev.map((f) => f.name));
-          const additions: UploadedFile[] = [];
+    async function loadFiles() {
+      setFilesLoading(true);
 
-          for (const name of status.exists) {
-            if (!known.has(name)) {
-              additions.push({ id: `db-exists-${name}`, name, status: "ready" });
-              known.add(name);
-            }
+      // The in-memory file list resets on every backend restart, but the
+      // database corpus persists. Fetch both sources together and merge them
+      // by name so whichever request finishes last cannot overwrite the other.
+      const [filesResult, statusResult] = await Promise.allSettled([
+        fetchFiles(),
+        fetchFilesStatus(),
+      ]);
+
+      if (cancelled) return;
+
+      const loadedFiles = filesResult.status === "fulfilled" ? filesResult.value : [];
+      const known = new Set(loadedFiles.map((file) => file.name));
+
+      if (statusResult.status === "fulfilled") {
+        for (const name of statusResult.value.exists) {
+          if (!known.has(name)) {
+            loadedFiles.push({ id: `db-exists-${name}`, name, status: "ready" });
+            known.add(name);
           }
-          for (const name of status.missing) {
-            if (!known.has(name)) {
-              additions.push({ id: `db-missing-${name}`, name, status: "missing" });
-              known.add(name);
-            }
+        }
+        for (const name of statusResult.value.missing) {
+          if (!known.has(name)) {
+            loadedFiles.push({ id: `db-missing-${name}`, name, status: "missing" });
+            known.add(name);
           }
+        }
+      }
 
-          return additions.length ? [...prev, ...additions] : prev;
-        });
-      })
-      .catch(() => {
-        /* status check is best-effort */
-      });
+      setFiles(loadedFiles);
+      setFilesLoading(false);
+    }
+
+    void loadFiles();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -167,6 +175,7 @@ function App() {
         collapsed={collapsed}
         onToggleCollapsed={() => setCollapsed((c) => !c)}
         files={files}
+        filesLoading={filesLoading}
         onFilesSelected={handleFilesSelected}
         onRemoveFile={handleRemoveFile}
       />

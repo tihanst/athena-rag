@@ -1,4 +1,4 @@
-import type { ChatMessage, DocumentStatus, UploadedFile } from "./types";
+import type { DocumentStatus, UploadedFile } from "./types";
 
 const BASE = "/api";
 
