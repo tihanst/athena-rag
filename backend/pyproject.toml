@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "sentence-transformers>=5.7.0",
     "sqlite-vec>=0.1.9",
+    "typesafe-sdk>=0.7.2",
     "uvicorn[standard]>=0.52.0",
 ]
 

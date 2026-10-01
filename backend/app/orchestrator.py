@@ -4,6 +4,8 @@ from collections import defaultdict
 
 from pydantic import ValidationError
 
+from typesafe_sdk import TypeSafeClient, Noul
+
 from app.schemas import (
     ChatRequest,
     ChatSystem,
@@ -15,7 +17,7 @@ from app.schemas import (
 from app.memory import log_history, chat_history, ChatHistory
 from app.db_types import RerankedResult
 from app.llm import llms
-from app.prompts import SEARCH_TERMS_SYSTEM_PROMPT, RAG_USER_PROMPT
+from app.prompts import SEARCH_TERMS_SYSTEM_PROMPT, RAG_USER_PROMPT, NON_RAG_USER_PROMPT
 from app.db_manager import execute_final_search_retrieval
 from app.rerank import get_cross_encoder
 from app.db_types import ChunkRow, FusedResult
@@ -36,33 +38,44 @@ Takes a ChatRequest, parses for search in lexical and semantic using llm
 async def run_chat(request: ChatRequest):
     query = request.content
 
-    try:
-        lex_search_terms: SearchTerms = await generate_lexical_search_terms(request)
-    except Exception as e:
-        yield f"Error getting lexical search terms: {str(e)}"
-        return
+    # Test RAG needed
+    if choose_rag(chat_history, query):
+        try:
+            lex_search_terms: SearchTerms = await generate_lexical_search_terms(request)
+        except Exception as e:
+            yield f"Error getting lexical search terms: {str(e)}"
+            return
 
-    context_chunks_dict = search_and_retrieve_chunks(
-        query=query, lexical_search_terms=lex_search_terms
-    )
-    log_history.add_search_item(lex_search_terms)
+        context_chunks_dict = search_and_retrieve_chunks(
+            query=query, lexical_search_terms=lex_search_terms
+        )
+        log_history.add_search_item(lex_search_terms)
 
-    context_string = construct_rag_chat_user_prompt(context_dict=context_chunks_dict)
+        context_string = construct_rag_chat_user_prompt(
+            context_dict=context_chunks_dict
+        )
 
-    full_user_prompt = RAG_USER_PROMPT.format(
-        user_question=query, source_material=context_string
-    )
+        full_user_prompt = RAG_USER_PROMPT.format(
+            user_question=query, source_material=context_string
+        )
 
-    yield "Awaiting answer....\n\n"
-    answer = await generate_chat_completion(full_context_query=full_user_prompt)
+        answer = await generate_chat_completion(full_context_query=full_user_prompt)
 
-    print("Full model answer is:")
-    print(answer)
-    yield answer
+        print("Full model answer is:")
+        print(answer)
+        yield answer
 
-    print(f"\n\n\n\n------------\n\n\n\n{log_history.unload_and_pack()}\n\n")
+        print(f"\n\n\n\n------------\n\n\n\n{log_history.unload_and_pack()}\n\n")
 
-    yield "Yo there"
+    else:
+        non_rag_user_prompt = NON_RAG_USER_PROMPT.format(user_question=query)
+        answer = await generate_chat_completion(full_context_query=non_rag_user_prompt)
+
+        print("Full model answer on the non-RAG path is:")
+        print(answer)
+        yield answer
+
+        print(f"\n\n\n\n------------\n\n\n\n{log_history.unload_and_pack()}\n\n")
 
     return
 
@@ -278,6 +291,37 @@ async def generate_chat_completion(full_context_query: str) -> str:
     chat_history.add_message(ChatResponse(role="assistant", content=message))
 
     return message
+
+
+async def non_rag_generate_chat_completion(non_rag_query: str) -> str:
+    pass
+
+
+def choose_rag(messages: ChatHistory, new_query: str) -> bool:
+    with TypeSafeClient() as client:
+        state = messages.to_message_list()[1:]
+        print(f"\n\n\nTHIS IS STATE\n\n{state}\n\n\n")
+
+        questions = {
+            "is_context_sufficient": Noul(
+                instructions=f"""Is the context already provided in the conversation \
+                    sufficient to answer the user's new query:\n\n{new_query}"""
+            ),
+        }
+
+        response = client.system_one(
+            model="jev-latest", state=state, questions=questions
+        )
+
+        print(f"\n\nNOUL:{response.answers['is_context_sufficient'].noul}\n\n")
+        print(f"\n\n{response}\n\n")
+
+        ans = response.answers["is_context_sufficient"].noul
+
+        if ans < 0.5:
+            return True
+        else:
+            return False
 
 
 # Testing below

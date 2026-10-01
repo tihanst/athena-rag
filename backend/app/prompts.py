@@ -82,3 +82,14 @@ Using the retrieved material above, answer the user's question:
 {user_question}
 </question>
 """
+
+NON_RAG_USER_PROMPT = """The user's question is:
+
+<question>
+{user_question}
+</question>
+
+Answer the user's question with the context already available. If the context isn't sufficient, state what information \
+is exactly missing and suggest questions with appropriate keywords that would trigger a hybrid search RAG retrieval \
+process that would successsfully provide the required information, if its available in the source material.
+"""

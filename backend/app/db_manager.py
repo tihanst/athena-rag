@@ -14,7 +14,6 @@ from .db_types import ChunkRow, ScoredChunkRow
 # Testing
 from app.sem_search import get_embedder
 from app.config import MARKDOWN_DIR
-# from .sem_search import process_semantic_query
 
 DBFILE_PATH = Path(__file__).parent.parent / "databases"
 
@@ -116,13 +115,11 @@ DATABASE_SOURCE_DOCS_SUMMARY = """
 
 def init_db():
     with get_connection() as conn:
-        # conn = sqlite3.connect(DBFILE.resolve())
         conn.execute(CREATE_DATABASE)
         conn.execute(CREATE_FTS5_TABLE)
         conn.executescript(FTS_TABLE_TRIGGERS)
         conn.execute(CREATE_VECTOR_TABLE)
         conn.commit()
-        # conn.close()
 
 
 @contextmanager
@@ -290,23 +287,5 @@ def delete_it():
 
 
 if __name__ == "__main__":
-    # print(DBFILE.exists())
-    # if not DBFILE.exists():
-    #     DBFILE.touch
-    # print("Initializing ...")
-    # init_db()
-    # print("done")
-
-    # query = embedder.embed_query(
-    #     "How did Shakespear's Antony and Cleopatra achieve supremecy against Hamlet?"
-    # )
-    # with get_connection() as conn:
-    #     rows = conn.execute(
-    #         SEMANTIC_SEARCH_QUERY,
-    #         (sqlite_vec.serialize_float32(query), 20),
-    #     ).fetchall()
-
-    #     for x in rows:
-    #         print(f"\n\n{x}\n\n")
     delete_it()
     query_database_source_documents()
