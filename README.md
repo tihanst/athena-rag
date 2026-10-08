@@ -10,8 +10,10 @@ Self-hosted, LLM-powered, hybrid search-based RAG research application. Upload d
 ## How it works
 
 - **Ingestion**: uploaded PDFs/DOCX/TXT/MD are converted to markdown, chunked, and embedded (`uploader.py`, `text_extractor.py`, `sem_search.py`).
+- **Routing**: before retrieval, TypeSafe System One checks the new question against the conversation history. If the existing context is sufficient, the request bypasses retrieval and goes directly to generation with a non-RAG prompt; otherwise it continues through the RAG pipeline (`orchestrator.py`).
 - **Retrieval**: queries are run through hybrid search — SQLite FTS5 lexical search fused with BGE dense-embedding similarity (`lex_search.py`, `sem_search.py`, `search_executor.py`), then reranked with a cross-encoder (`rerank.py`).
-- **Chat**: the orchestrator extracts search terms from the conversation, retrieves and reranks relevant chunks, assembles them into a prompt, and streams a response from an LLM via `litellm` (`orchestrator.py`, `prompt_constructor.py`, `llm.py`).
+- **Chat**: when retrieval is needed, the orchestrator extracts search terms, retrieves and reranks relevant chunks, and assembles them into a grounded prompt. Both paths generate the response through an LLM via `litellm` (`orchestrator.py`, `prompt_constructor.py`, `llm.py`).
+- **Presentation**: assistant responses are rendered as GitHub-Flavored Markdown. Raw HTML is ignored and remote images are replaced with text placeholders so model output cannot trigger third-party image requests (`MessageList.tsx`).
 
 ## Configuration
 
@@ -34,6 +36,12 @@ CROSS_ENCODER_MODEL=...
 CROSS_ENCODER_TOP_K=...
 
 EMBEDDER_USE_SMALL=...
+```
+
+The System One routing step uses TypeSafe AI and requires its API key in the environment that launches the backend (the SDK reads it directly from the process environment):
+
+```bash
+export TYPESAFE_API_KEY=...
 ```
 
 Plus whatever API key(s) your chosen LLM provider(s) need (see [litellm's provider docs](https://docs.litellm.ai/docs/providers)).
@@ -70,7 +78,7 @@ cd frontend && npm run dev
 
 ## API
 
-- `POST /api/chat` — accepts `{ message, history }`, runs the RAG pipeline, returns the assistant's response.
+- `POST /api/chat` — accepts `{ content }`, uses System One and the server-side conversation history to decide whether retrieval is needed, conditionally runs the RAG pipeline, and returns the assistant's response.
 - `POST /api/chat/reset` — cancels any in-flight chat request, flushes the session to `backend/logs/chat_sessions.jsonl`, and clears conversation/lexical history.
 - `POST /api/upload` — accepts a multipart file, ingests it (chunk + embed + index), returns file metadata.
 - `GET /api/files` — lists uploaded file metadata.
